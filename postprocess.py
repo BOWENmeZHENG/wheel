@@ -1,6 +1,10 @@
 import solidspy.preprocesor as pre
 import solidspy.postprocesor as post
 import matplotlib.pyplot as plt
+import numpy as np
+from collections import Counter
+from scipy.spatial import distance
+import math
 
 
 def plot_results(folder, disp, strain, stress):
@@ -96,13 +100,14 @@ def plot_results(folder, disp, strain, stress):
     plt.show()
 
 
-def output_csv(folder, disp, strain, stress):
+def output_csv(folder, disp, strain, stress, ro=0.3, ri=0.2, bw=0.05, tol=1e-4, vis=False):
     """
     node index starts at 0
     """
     nodes, _, elements, _ = pre.readin(folder=folder + '/')
     nodes_x = nodes[:, 1]
     nodes_y = nodes[:, 2]
+    type_1, type_2, type_3 = node_type(nodes_x, nodes_y, elements[:, -3:], ro=ro, ri=ri, bw=bw, tol=tol, vis=vis)
     disp_x = disp[:, 0]
     disp_y = disp[:, 1]
     strain_xx = strain[:, 0]
@@ -113,12 +118,110 @@ def output_csv(folder, disp, strain, stress):
     stress_xy = stress[:, 2]
 
     with open(f"{folder}/{folder}_nodes.csv", "w") as f:
-        f.write("nodeid,coorx,coory,dispx,dispy,strainxx,strainyy,strainxy,stressxx,stressyy,stressxy\n")
+        f.write("nodeid,nodetype,coorx,coory,dispx,dispy,strainxx,strainyy,strainxy,stressxx,stressyy,stressxy\n")
         for i in range(len(nodes_x)):
+            if i in type_1:
+                nodetype = 1
+            elif i in type_2:
+                nodetype = 2
+            else:
+                nodetype = 3
             f.write(
-                f"{i},{nodes_x[i]},{nodes_y[i]},{disp_x[i]:.5},{disp_y[i]:.5},{strain_xx[i]:.5},{strain_yy[i]:.5},{strain_xy[i]:.5},{stress_xx[i]:.5},{stress_yy[i]:.5},{stress_xy[i]:.5}\n")
+                f"{i},{nodetype},{nodes_x[i]},{nodes_y[i]},{disp_x[i]:.5},{disp_y[i]:.5},{strain_xx[i]:.5},{strain_yy[i]:.5},{strain_xy[i]:.5},{stress_xx[i]:.5},{stress_yy[i]:.5},{stress_xy[i]:.5}\n")
 
     with open(f"{folder}/{folder}_elements.csv", "w") as f:
         f.write("elem1,elem2,elem3\n")
         for i in range(len(elements)):
             f.write(f"{elements[i, -3]},{elements[i, -2]},{elements[i, -1]}\n")
+
+
+def node_type(nodes_x, nodes_y, elements, ro=0.3, ri=0.2, bw=0.05, tol=1e-4, vis=False):
+    """
+    nodes_x: x coordinates of the node list
+    nodes_y: y coordinates of the node list
+    elements: element connectivity, size (len, 3)
+    Type 1: outside exterior nodes
+    Type 2: inside exterior nodes
+    Type 3: interior nodes
+    """
+    elem_list = elements.flatten().tolist()
+    # count node appearances
+    nodes, _ = np.unique(elem_list, return_index=True)
+
+    # boundary geometries
+    angle = math.pi / 4
+    coeff = math.cos(angle)
+    type_1, type_2 = [], []
+
+    for i in nodes:
+        coord_x, coord_y = nodes_x[i], nodes_y[i]
+        # outer circle
+        if abs(coord_x ** 2 + coord_y ** 2 - ro ** 2) < tol:
+            type_1.append(i)
+        # inner circle
+        if abs(coord_x ** 2 + coord_y ** 2 - ri ** 2) < tol:
+            type_2.append(i)
+        # inside
+        tol_in = 0.003
+        condition_1 = abs(coord_y - coord_x) < (bw / 2 + bw * coeff) / coeff - tol_in and abs(coord_y + coord_x) < (
+                    bw / 2 + bw * coeff) / coeff - tol_in
+        condition_2 = abs(coord_x) < bw / 2 + bw * coeff - tol_in and abs(coord_y) < bw / 2 + bw * coeff - tol_in
+        # bar_1
+        if abs(coord_x - bw / 2) < tol or abs(coord_x + bw / 2) < tol:
+            if coord_x ** 2 + coord_y ** 2 <= ri ** 2 and not condition_1 and not condition_2:
+                type_2.append(i)
+        # bar_2
+        if abs(coord_y - bw / 2) < tol or abs(coord_y + bw / 2) < tol:
+            if coord_x ** 2 + coord_y ** 2 <= ri ** 2 and not condition_1 and not condition_2:
+                type_2.append(i)
+        # bar_3
+        if abs(coord_y - coord_x + bw / 2 / coeff) < tol or abs(coord_y - coord_x - bw / 2 / coeff) < tol:
+            if coord_x ** 2 + coord_y ** 2 <= ri ** 2 and not condition_1 and not condition_2:
+                type_2.append(i)
+        # bar_4
+        if abs(coord_y + coord_x + bw / 2 / coeff) < tol or abs(coord_y + coord_x - bw / 2 / coeff) < tol:
+            if coord_x ** 2 + coord_y ** 2 <= ri ** 2 and not condition_1 and not condition_2:
+                type_2.append(i)
+    type_3 = [node for node in nodes if node not in type_1 + type_2]
+    if vis:
+        x_1 = [nodes_x[i] for i in type_1]
+        y_1 = [nodes_y[i] for i in type_1]
+        x_2 = [nodes_x[i] for i in type_2]
+        y_2 = [nodes_y[i] for i in type_2]
+        x_3 = [nodes_x[i] for i in type_3]
+        y_3 = [nodes_y[i] for i in type_3]
+        plt.figure(figsize=(8, 8))
+        plt.scatter(x_1, y_1)
+        plt.scatter(x_2, y_2)
+        plt.scatter(x_3, y_3)
+        plt.show()
+
+    return type_1, type_2, type_3
+
+# if condition_1 and condition_2 and i in nodes_to_keep:
+#     nodes_to_keep.remove(i)
+
+# Geometric constraints
+# r = 0.02
+# num_neigh = []
+# for index_chosen in nodes:
+#     coord_chosen = [nodes_x[index_chosen], nodes_y[index_chosen]]
+#     indices_neigh = []
+#     for index in node_indices:
+#         coord_to_compare = [nodes_x[index], nodes_y[index]]
+#         dist = distance.euclidean(coord_chosen, coord_to_compare)
+#         if r > dist > 0:
+#             indices_neigh.append(index)
+#     num_neigh.append(len(indices_neigh))
+# num_neigh_possible, _ = np.unique(num_neigh, return_index=True)
+#
+# for i, node in enumerate(nodes):
+#     if num_neigh[i] >= num_neigh_possible[-3]:
+#         nodes_to_cut.remove(node)
+
+# x = [nodes_x[i] for i in indices_neigh]
+# y = [nodes_y[i] for i in indices_neigh]
+# plt.figure(figsize=(8, 8))
+# plt.scatter(x, y)
+# plt.scatter(coord_chosen[0], coord_chosen[1])
+# plt.show()

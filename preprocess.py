@@ -3,7 +3,7 @@ import pygmsh
 import math
 
 
-def meshing(r_out=0.2, r_in=0.15, bar_width=0.02, center_x=0, center_y=0, mesh_size=0.02):
+def meshing(r_out=0.2, r_in=0.15, bar_width=0.02, center_x=0, center_y=0, mesh_size=0.01):
     end = (r_out + r_in) / 2
     angle = math.pi / 4
     coeff = math.cos(angle)
