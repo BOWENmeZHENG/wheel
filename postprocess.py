@@ -100,14 +100,14 @@ def plot_results(folder, disp, strain, stress):
     plt.show()
 
 
-def output_csv(folder, disp, strain, stress, ro=0.3, ri=0.2, bw=0.05, tol=1e-4, vis=False):
+def output_csv(folder, disp, strain, stress, ro=0.3, ri=0.2, bw=0.05, vis=False):
     """
     node index starts at 0
     """
     nodes, _, elements, _ = pre.readin(folder=folder + '/')
     nodes_x = nodes[:, 1]
     nodes_y = nodes[:, 2]
-    type_1, type_2, type_3 = node_type(nodes_x, nodes_y, elements[:, -3:], ro=ro, ri=ri, bw=bw, tol=tol, vis=vis)
+    type_1, type_2, type_3 = node_type(nodes_x, nodes_y, elements[:, -3:], ro=ro, ri=ri, bw=bw, vis=vis)
     disp_x = disp[:, 0]
     disp_y = disp[:, 1]
     strain_xx = strain[:, 0]
@@ -135,7 +135,7 @@ def output_csv(folder, disp, strain, stress, ro=0.3, ri=0.2, bw=0.05, tol=1e-4, 
             f.write(f"{elements[i, -3]},{elements[i, -2]},{elements[i, -1]}\n")
 
 
-def node_type(nodes_x, nodes_y, elements, ro=0.3, ri=0.2, bw=0.05, tol=1e-4, vis=False):
+def node_type(nodes_x, nodes_y, elements, ro=0.3, ri=0.2, bw=0.05, vis=False):
     """
     nodes_x: x coordinates of the node list
     nodes_y: y coordinates of the node list
@@ -152,39 +152,59 @@ def node_type(nodes_x, nodes_y, elements, ro=0.3, ri=0.2, bw=0.05, tol=1e-4, vis
     angle = math.pi / 4
     coeff = math.cos(angle)
     type_1, type_2 = [], []
-
+    tol_circle = 1e-4
+    tol_in = 1e-4
     for i in nodes:
         coord_x, coord_y = nodes_x[i], nodes_y[i]
         # outer circle
-        if abs(coord_x ** 2 + coord_y ** 2 - ro ** 2) < tol:
+        if abs(coord_x ** 2 + coord_y ** 2 - ro ** 2) < tol_circle:
             type_1.append(i)
+            continue
         # inner circle
-        tol_in = 0.004
-        cond_inner = abs(coord_x) < bw / 2 + tol_in or abs(coord_y) < bw / 2  + tol_in or abs(
+        cond_inner = abs(coord_x) < bw / 2 + tol_in or abs(coord_y) < bw / 2 + tol_in or abs(
             coord_y - coord_x) < + bw / 2 / coeff + tol_in or abs(coord_y + coord_x) < + bw / 2 / coeff + tol_in
-        if abs(coord_x ** 2 + coord_y ** 2 - ri ** 2) < tol and not cond_inner:
+        if abs(coord_x ** 2 + coord_y ** 2 - ri ** 2) < tol_circle and not cond_inner:
             type_2.append(i)
+            continue
         # inside
-
         condition_1 = abs(coord_y - coord_x) < (bw / 2 + bw * coeff) / coeff - tol_in and abs(coord_y + coord_x) < (
-                    bw / 2 + bw * coeff) / coeff - tol_in
+                bw / 2 + bw * coeff) / coeff - tol_in
         condition_2 = abs(coord_x) < bw / 2 + bw * coeff - tol_in and abs(coord_y) < bw / 2 + bw * coeff - tol_in
         # bar_1
         if abs(coord_x - bw / 2) < tol_in or abs(coord_x + bw / 2) < tol_in:
             if coord_x ** 2 + coord_y ** 2 <= ri ** 2 and not condition_1 and not condition_2:
                 type_2.append(i)
+                continue
         # bar_2
         if abs(coord_y - bw / 2) < tol_in or abs(coord_y + bw / 2) < tol_in:
             if coord_x ** 2 + coord_y ** 2 <= ri ** 2 and not condition_1 and not condition_2:
                 type_2.append(i)
+                continue
         # bar_3
         if abs(coord_y - coord_x + bw / 2 / coeff) < tol_in or abs(coord_y - coord_x - bw / 2 / coeff) < tol_in:
             if coord_x ** 2 + coord_y ** 2 <= ri ** 2 and not condition_1 and not condition_2:
                 type_2.append(i)
+                continue
         # bar_4
         if abs(coord_y + coord_x + bw / 2 / coeff) < tol_in or abs(coord_y + coord_x - bw / 2 / coeff) < tol_in:
             if coord_x ** 2 + coord_y ** 2 <= ri ** 2 and not condition_1 and not condition_2:
                 type_2.append(i)
+                continue
+
+        # corners
+        cond_corner_1 = abs(coord_x - bw / 2) < tol_in
+        cond_corner_2 = abs(coord_x + bw / 2) < tol_in
+        cond_corner_3 = abs(coord_y - bw / 2) < tol_in
+        cond_corner_4 = abs(coord_y + bw / 2) < tol_in
+        cond_corner_5 = abs(coord_y - coord_x - bw / 2 / coeff) < tol_in
+        cond_corner_6 = abs(coord_y - coord_x + bw / 2 / coeff) < tol_in
+        cond_corner_7 = abs(coord_y + coord_x - bw / 2 / coeff) < tol_in
+        cond_corner_8 = abs(coord_y + coord_x + bw / 2 / coeff) < tol_in
+        cond_corners = cond_corner_1 or cond_corner_2 or cond_corner_3 or cond_corner_4 or cond_corner_5 or cond_corner_6 or cond_corner_7 or cond_corner_8
+        if cond_corners and abs(coord_x ** 2 + coord_y ** 2 - ri ** 2) < tol_circle:
+            type_2.append(i)
+            continue
+
     type_3 = [node for node in nodes if node not in type_1 + type_2]
     if vis:
         x_1 = [nodes_x[i] for i in type_1]
@@ -204,4 +224,3 @@ def node_type(nodes_x, nodes_y, elements, ro=0.3, ri=0.2, bw=0.05, tol=1e-4, vis
         plt.show()
 
     return type_1, type_2, type_3
-
