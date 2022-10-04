@@ -159,27 +159,30 @@ def node_type(nodes_x, nodes_y, elements, ro=0.3, ri=0.2, bw=0.05, tol=1e-4, vis
         if abs(coord_x ** 2 + coord_y ** 2 - ro ** 2) < tol:
             type_1.append(i)
         # inner circle
-        if abs(coord_x ** 2 + coord_y ** 2 - ri ** 2) < tol:
+        tol_in = 0.004
+        cond_inner = abs(coord_x) < bw / 2 + tol_in or abs(coord_y) < bw / 2  + tol_in or abs(
+            coord_y - coord_x) < + bw / 2 / coeff + tol_in or abs(coord_y + coord_x) < + bw / 2 / coeff + tol_in
+        if abs(coord_x ** 2 + coord_y ** 2 - ri ** 2) < tol and not cond_inner:
             type_2.append(i)
         # inside
-        tol_in = 0.003
+
         condition_1 = abs(coord_y - coord_x) < (bw / 2 + bw * coeff) / coeff - tol_in and abs(coord_y + coord_x) < (
                     bw / 2 + bw * coeff) / coeff - tol_in
         condition_2 = abs(coord_x) < bw / 2 + bw * coeff - tol_in and abs(coord_y) < bw / 2 + bw * coeff - tol_in
         # bar_1
-        if abs(coord_x - bw / 2) < tol or abs(coord_x + bw / 2) < tol:
+        if abs(coord_x - bw / 2) < tol_in or abs(coord_x + bw / 2) < tol_in:
             if coord_x ** 2 + coord_y ** 2 <= ri ** 2 and not condition_1 and not condition_2:
                 type_2.append(i)
         # bar_2
-        if abs(coord_y - bw / 2) < tol or abs(coord_y + bw / 2) < tol:
+        if abs(coord_y - bw / 2) < tol_in or abs(coord_y + bw / 2) < tol_in:
             if coord_x ** 2 + coord_y ** 2 <= ri ** 2 and not condition_1 and not condition_2:
                 type_2.append(i)
         # bar_3
-        if abs(coord_y - coord_x + bw / 2 / coeff) < tol or abs(coord_y - coord_x - bw / 2 / coeff) < tol:
+        if abs(coord_y - coord_x + bw / 2 / coeff) < tol_in or abs(coord_y - coord_x - bw / 2 / coeff) < tol_in:
             if coord_x ** 2 + coord_y ** 2 <= ri ** 2 and not condition_1 and not condition_2:
                 type_2.append(i)
         # bar_4
-        if abs(coord_y + coord_x + bw / 2 / coeff) < tol or abs(coord_y + coord_x - bw / 2 / coeff) < tol:
+        if abs(coord_y + coord_x + bw / 2 / coeff) < tol_in or abs(coord_y + coord_x - bw / 2 / coeff) < tol_in:
             if coord_x ** 2 + coord_y ** 2 <= ri ** 2 and not condition_1 and not condition_2:
                 type_2.append(i)
     type_3 = [node for node in nodes if node not in type_1 + type_2]
@@ -191,37 +194,14 @@ def node_type(nodes_x, nodes_y, elements, ro=0.3, ri=0.2, bw=0.05, tol=1e-4, vis
         x_3 = [nodes_x[i] for i in type_3]
         y_3 = [nodes_y[i] for i in type_3]
         plt.figure(figsize=(8, 8))
-        plt.scatter(x_1, y_1)
-        plt.scatter(x_2, y_2)
-        plt.scatter(x_3, y_3)
+        plt.title(f"ro={ro:.3}, ri={ri:.3}, bw={bw:.3}", fontsize=16)
+        plt.scatter(x_1, y_1, label="Type 1")
+        plt.scatter(x_2, y_2, label="Type 2")
+        plt.scatter(x_3, y_3, label="Type 3")
+        plt.xlabel("x")
+        plt.ylabel("y")
+        plt.legend()
         plt.show()
 
     return type_1, type_2, type_3
 
-# if condition_1 and condition_2 and i in nodes_to_keep:
-#     nodes_to_keep.remove(i)
-
-# Geometric constraints
-# r = 0.02
-# num_neigh = []
-# for index_chosen in nodes:
-#     coord_chosen = [nodes_x[index_chosen], nodes_y[index_chosen]]
-#     indices_neigh = []
-#     for index in node_indices:
-#         coord_to_compare = [nodes_x[index], nodes_y[index]]
-#         dist = distance.euclidean(coord_chosen, coord_to_compare)
-#         if r > dist > 0:
-#             indices_neigh.append(index)
-#     num_neigh.append(len(indices_neigh))
-# num_neigh_possible, _ = np.unique(num_neigh, return_index=True)
-#
-# for i, node in enumerate(nodes):
-#     if num_neigh[i] >= num_neigh_possible[-3]:
-#         nodes_to_cut.remove(node)
-
-# x = [nodes_x[i] for i in indices_neigh]
-# y = [nodes_y[i] for i in indices_neigh]
-# plt.figure(figsize=(8, 8))
-# plt.scatter(x, y)
-# plt.scatter(coord_chosen[0], coord_chosen[1])
-# plt.show()

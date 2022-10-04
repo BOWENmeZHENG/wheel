@@ -12,6 +12,6 @@ def analysis(r_out=0.2, r_in=0.15, bar_width=0.02, center_x=0., center_y=0., E=1
     if plot:
         postprocess.plot_results(folder, disp, strain, stress)
     if csv:
-        postprocess.output_csv(folder, disp, strain, stress, ro=r_out, ri=r_in, bw=bar_width, tol=1e-4, vis=True)
+        postprocess.output_csv(folder, disp, strain, stress, ro=r_out, ri=r_in, bw=bar_width, tol=1e-3, vis=True)
 
     return folder
