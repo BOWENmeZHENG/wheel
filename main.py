@@ -23,4 +23,4 @@ for ro in r_out:
             os.makedirs(data_folder, exist_ok=True)
             shutil.copyfile(f"{folder}/{folder}_elements.csv", f"{data_folder}/{folder}_elements.csv")
             shutil.copyfile(f"{folder}/{folder}_nodes.csv", f"{data_folder}/{folder}_nodes.csv")
-            # shutil.rmtree(folder)
+            shutil.rmtree(folder)
