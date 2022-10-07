@@ -4,11 +4,11 @@ import os
 import shutil
 
 # Define parameters of training data
-np.random.seed(199)
+np.random.seed(1189)
 
-r_out = 0.1 * np.random.rand(5) + 0.2  # range: [0.2, 0.3]
-r_in = r_out - (0.1 * np.random.rand(5) + 0.05)  # range: r_out - [0.05, 0.15]
-bar_width = 0.03 * np.random.rand(5) + 0.02  # range: [0.02, 0.05]
+r_out = 0.1 * np.random.rand(1) + 0.2  # range: [0.2, 0.3]
+r_in = r_out - (0.1 * np.random.rand(1) + 0.05)  # range: r_out - [0.05, 0.15]
+bar_width = 0.03 * np.random.rand(1) + 0.02  # range: [0.02, 0.05]
 
 # Write .csv files for ML training
 for ro in r_out:

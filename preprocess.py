@@ -39,6 +39,7 @@ def meshing(r_out=0.2, r_in=0.15, bar_width=0.02, center_x=0, center_y=0, mesh_s
         geom.boolean_union([geom.boolean_difference(outer, inner),
                             bar_1, bar_2, bar_3, bar_4])
         mesh = geom.generate_mesh()
+        # pygmsh.write("test.msh")
     return mesh
 
 
